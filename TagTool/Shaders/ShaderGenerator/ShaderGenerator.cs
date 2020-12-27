@@ -131,18 +131,18 @@ namespace TagTool.Shaders.ShaderGenerator
 
         public static VertexShader GenerateVertexShader(GameCache cache, IShaderGenerator generator)
         {
-            var vtsh = new VertexShader { SupportedVertexTypes = new List<VertexShader.ShaderVertexBlock>(), Shaders = new List<VertexShaderBlock>() };
+            var vtsh = new VertexShader { EntryPoints = new List<VertexShader.VertexShaderEntryPoint>(), Shaders = new List<VertexShaderBlock>() };
 
             foreach(VertexType vertex in Enum.GetValues(typeof(VertexType)))
             {
-                var vertexBlock = new VertexShader.ShaderVertexBlock { EntryPointShaders = new List<ShaderEntryPointBlock>() };
-                vtsh.SupportedVertexTypes.Add(vertexBlock);
+                var vertexBlock = new VertexShader.VertexShaderEntryPoint { SupportedVertexTypes = new List<ShortOffsetCountBlock>() };
+                vtsh.EntryPoints.Add(vertexBlock);
                 if (generator.IsVertexFormatSupported(vertex))
                 {
                     foreach (ShaderStage entryPoint in Enum.GetValues(typeof(ShaderStage)))
                     {
-                        var entryBlock = new ShaderEntryPointBlock();
-                        vertexBlock.EntryPointShaders.Add(entryBlock);
+                        var entryBlock = new ShortOffsetCountBlock();
+                        vertexBlock.SupportedVertexTypes.Add(entryBlock);
                         if (generator.IsEntryPointSupported(entryPoint) && !generator.IsVertexShaderShared(entryPoint))
                         {
                             entryBlock.Count = 1;
@@ -155,7 +155,7 @@ namespace TagTool.Shaders.ShaderGenerator
             }
 
             if (vtsh.Shaders.Count == 0)
-                vtsh.SupportedVertexTypes = null;
+                vtsh.EntryPoints = null;
 
             return vtsh;
         }
@@ -176,7 +176,7 @@ namespace TagTool.Shaders.ShaderGenerator
                             entryPointBlock.Option = new List<GlobalPixelShader.EntryPointBlock.OptionBlock>();
                             var optionBlock = new GlobalPixelShader.EntryPointBlock.OptionBlock { RenderMethodOptionIndex = (short)i, OptionMethodShaderIndices = new List<int>() };
                             entryPointBlock.Option.Add(optionBlock);
-                            for (int option = 0; i < generator.GetMethodOptionCount(i); option++)
+                            for (int option = 0; option < generator.GetMethodOptionCount(i); option++)
                             {
                                 optionBlock.OptionMethodShaderIndices.Add(glps.Shaders.Count);
                                 var result = generator.GenerateSharedPixelShader(entryPoint, i, option);
@@ -191,11 +191,11 @@ namespace TagTool.Shaders.ShaderGenerator
 
         public static PixelShader GeneratePixelShader(GameCache cache, IShaderGenerator generator)
         {
-            var pixl = new PixelShader {EntryPointShaders = new List<ShaderEntryPointBlock>(), Shaders = new List<PixelShaderBlock>() };
+            var pixl = new PixelShader {EntryPointShaders = new List<ShortOffsetCountBlock>(), Shaders = new List<PixelShaderBlock>() };
 
             foreach (ShaderStage entryPoint in Enum.GetValues(typeof(ShaderStage)))
             {
-                var entryBlock = new ShaderEntryPointBlock();
+                var entryBlock = new ShortOffsetCountBlock();
                 pixl.EntryPointShaders.Add(entryBlock);
                 if(generator.IsEntryPointSupported(entryPoint) && !generator.IsPixelShaderShared(entryPoint))
                 {
@@ -210,19 +210,22 @@ namespace TagTool.Shaders.ShaderGenerator
 
         public static RenderMethodDefinition GenerateRenderMethodDefinition(GameCache cache, Stream cacheStream, IShaderGenerator generator, string shaderType, out GlobalPixelShader glps, out GlobalVertexShader glvs)
         {
+            Console.WriteLine($"Generating rmdf for \"{shaderType}\"");
+
             var rmdf = new RenderMethodDefinition();
 
             glps = GenerateSharedPixelShader(cache, generator);
             glvs = GenerateSharedVertexShader(cache, generator);
 
-            var glpsTag = cache.TagCache.AllocateTag<GlobalPixelShader>($"shaders\\{shaderType.ToLower()}_shared_pixel_shaders");
+            if (!cache.TagCache.TryGetTag<GlobalPixelShader>($"shaders\\{shaderType.ToLower()}_shared_pixel_shaders", out CachedTag glpsTag))
+                glpsTag = cache.TagCache.AllocateTag<GlobalPixelShader>($"shaders\\{shaderType.ToLower()}_shared_pixel_shaders");
             cache.Serialize(cacheStream, glpsTag, glps);
             rmdf.GlobalPixelShader = glpsTag;
 
-            var glvsTag = cache.TagCache.AllocateTag<GlobalVertexShader>($"shaders\\{shaderType.ToLower()}_shared_vertex_shaders");
+            if (!cache.TagCache.TryGetTag<GlobalVertexShader>($"shaders\\{shaderType.ToLower()}_shared_vertex_shaders", out CachedTag glvsTag))
+                glvsTag = cache.TagCache.AllocateTag<GlobalVertexShader>($"shaders\\{shaderType.ToLower()}_shared_vertex_shaders");
             cache.Serialize(cacheStream, glvsTag, glvs);
             rmdf.GlobalVertexShader = glvsTag;
-            
 
             rmdf.DrawModes = new List<RenderMethodDefinition.DrawMode>();
             rmdf.Vertices = new List<RenderMethodDefinition.VertexBlock>();
@@ -235,21 +238,12 @@ namespace TagTool.Shaders.ShaderGenerator
                 if (generator.IsVertexFormatSupported(vertexType))
                     rmdf.Vertices.Add(new RenderMethodDefinition.VertexBlock { VertexType = (short)vertexType });
 
-            // hackfix for methods
-            if (shaderType == "black")
-            {
-                rmdf.RenderMethodOptions = cache.TagCache.GetTag(@"shaders\shader_options\global_shader_options", "rmop");
+            rmdf.RenderMethodOptions = cache.TagCache.GetTag<RenderMethodOption>(@"shaders\shader_options\global_shader_options");
 
-                rmdf.Methods = new List<RenderMethodDefinition.Method>();
+            rmdf.Methods = CreateMethods(shaderType, generator, cache, cacheStream);
 
-                var blacknessStringid = cache.StringTable.GetStringId("blackness(no_options)");
-                if (blacknessStringid == StringId.Invalid)
-                {
-                    blacknessStringid = cache.StringTable.AddString("blackness(no_options)");
-                }
-                rmdf.Methods.Add(new RenderMethodDefinition.Method { Type = blacknessStringid, VertexShaderMethodMacroName = StringId.Invalid, PixelShaderMethodMacroName = StringId.Invalid });
-            }
-
+            // problems without this
+            cache.SaveStrings();
 
             return rmdf;
         }
@@ -482,7 +476,7 @@ namespace TagTool.Shaders.ShaderGenerator
                     if (generator.IsVertexShaderShared(mode))
                         vertexShader = glvs.Shaders[glvs.VertexTypes[rmdf.Vertices[0].VertexType].DrawModes[(int)mode].ShaderIndex];
                     else
-                        vertexShader = vtsh.Shaders[vtsh.SupportedVertexTypes[rmdf.Vertices[0].VertexType].EntryPointShaders[(int)mode].Offset];
+                        vertexShader = vtsh.Shaders[vtsh.EntryPoints[rmdf.Vertices[0].VertexType].SupportedVertexTypes[(int)mode].Offset];
 
                     if (generator.IsPixelShaderShared(mode))
                     {
@@ -618,7 +612,129 @@ namespace TagTool.Shaders.ShaderGenerator
             
             return rmt2;
         }
-    }
-
     
+        /// <summary>
+        /// Returns a list of ShaderMethods based on input shader type.
+        /// </summary>
+        private static List<RenderMethodDefinition.Method> CreateMethods(string shaderType, IShaderGenerator generator, GameCache cache, Stream cacheStream)
+        {
+            List<RenderMethodDefinition.Method> result = new List<RenderMethodDefinition.Method>();
+
+            Array enumValues = generator.GetMethodNames();
+
+            if (enumValues == null || generator == null)
+                return result;
+
+            foreach (var method in enumValues)
+            {
+                // fixup names that can't be put into enums
+                string methodName = FixupMethodOptionName(method.ToString().ToLower());
+
+                var nameStringid = cache.StringTable.GetStringId(methodName);
+                if (nameStringid == StringId.Invalid)
+                    nameStringid = cache.StringTable.AddString(methodName);
+
+                var newMethod = new RenderMethodDefinition.Method();
+
+                newMethod.Type = nameStringid;
+                newMethod.ShaderOptions = new List<RenderMethodDefinition.Method.ShaderOption>();
+
+                for (int i = 0; i < generator.GetMethodOptionCount((int)method); i++)
+                {
+                    if (shaderType == "black")
+                        break;
+
+                    var optionBlock = new RenderMethodDefinition.Method.ShaderOption();
+
+                    var parameters = generator.GetParametersInOption(methodName, i, out string rmopName, out string optionName);
+
+                    // fixup names that can't be put into enums
+                    optionName = FixupMethodOptionName(optionName.ToLower());
+
+                    optionBlock.Type = cache.StringTable.GetStringId(optionName);
+                    if (optionBlock.Type == StringId.Invalid)
+                        optionBlock.Type = cache.StringTable.AddString(optionName);
+
+                    optionBlock.Option = null;
+                    if (rmopName != null && !cache.TagCache.TryGetTag<RenderMethodOption>(rmopName, out optionBlock.Option))
+                    {
+                        Console.WriteLine($"Generating rmop \"{rmopName}\"");
+
+                        var rmop = new RenderMethodOption();
+                        rmop.Options = new List<RenderMethodOption.OptionBlock>();
+
+                        foreach (var prm in parameters.Parameters)
+                        {
+                            if (!prm.Flags.HasFlag(ShaderParameterFlags.IsXFormOnly) && (prm.CodeType == HLSLType.Xform_2d || prm.CodeType == HLSLType.Xform_3d))
+                                continue;
+
+                            var rmopParamBlock = new RenderMethodOption.OptionBlock();
+
+                            string registerName = prm.RegisterName;
+
+                            switch (prm.RegisterType)
+                            {
+                                case RegisterType.Boolean:
+                                    rmopParamBlock.Type = RenderMethodOption.OptionBlock.OptionDataType.Boolean;
+                                    break;
+                                case RegisterType.Integer:
+                                    rmopParamBlock.Type = RenderMethodOption.OptionBlock.OptionDataType.Integer;
+                                    break;
+                                case RegisterType.Sampler:
+                                    rmopParamBlock.Type = RenderMethodOption.OptionBlock.OptionDataType.Sampler;
+                                    break;
+                                case RegisterType.Vector:
+                                    rmopParamBlock.Type = RenderMethodOption.OptionBlock.OptionDataType.Float;
+                                    if (prm.Flags.HasFlag(ShaderParameterFlags.IsColor))
+                                        rmopParamBlock.Type = RenderMethodOption.OptionBlock.OptionDataType.IntegerColor;
+                                    else if (prm.Flags.HasFlag(ShaderParameterFlags.IsXFormOnly))
+                                    {
+                                        rmopParamBlock.Type = RenderMethodOption.OptionBlock.OptionDataType.Sampler;
+                                        registerName = registerName.Replace("_xform", "");
+                                    }
+                                    else if (prm.CodeType != HLSLType.Float)
+                                        rmopParamBlock.Type = RenderMethodOption.OptionBlock.OptionDataType.Float4;
+                                    break;
+                            }
+
+                            rmopParamBlock.Name = cache.StringTable.GetStringId(registerName);
+                            if (rmopParamBlock.Name == StringId.Invalid)
+                                rmopParamBlock.Name = cache.StringTable.AddString(registerName);
+
+                            rmopParamBlock.RenderMethodExtern = (RenderMethodExtern)((int)prm.RenderMethodExtern);
+
+                            rmop.Options.Add(rmopParamBlock);
+                        }
+
+                        optionBlock.Option = cache.TagCache.AllocateTag<RenderMethodOption>(rmopName);
+                        cache.Serialize(cacheStream, optionBlock.Option, rmop);
+                    }
+
+                    newMethod.ShaderOptions.Add(optionBlock);
+                }
+
+                result.Add(newMethod);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Contains hardcoded fixups for shader method or option names
+        /// </summary>
+        private static string FixupMethodOptionName(string input)
+        {
+            switch (input)
+            {
+                case "first_person_never_with_rotating_bitmaps":
+                    return @"first_person_never_w/rotating_bitmaps";
+                case "_3_channel_self_illum":
+                    return "3_channel_self_illum";
+                case "blackness_no_options":
+                    return "blackness(no_options)";
+            }
+
+            return input;
+        }
+    }
 }

@@ -25,7 +25,6 @@ namespace TagTool.Commands.CollisionModels
         private bool forceimport = false;
         private int max_surface_edges = 8;
         private bool buildmopp = false;
-        private bool isobj = false;
 
         public ImportCollisionGeometryCommand(GameCache cache)
             : base(false,
@@ -89,9 +88,6 @@ namespace TagTool.Commands.CollisionModels
 
 
             FileInfo filepath = new FileInfo(fileName);
-            //the obj format seems to use different axes by default, adjust debug printouts 
-            if (filepath.Extension.ToLower() == ".obj")
-                isobj = true;
 
             //check inputs
             if(Cache.TagCache.TryGetTag(tagName + ".coll", out tag))
@@ -253,7 +249,7 @@ namespace TagTool.Commands.CollisionModels
             public Vector3D b;
             public Vector3D c;
             public int material_index;
-            public float sorting_parameter;
+            public float area;
         }
 
         public class triangle_list_qsort_compar : IComparer<triangle>
@@ -261,9 +257,9 @@ namespace TagTool.Commands.CollisionModels
             public int Compare(triangle element1, triangle element2)
             {
                 int result = 0;
-                float v2 = element2.sorting_parameter;
-                if (element1.sorting_parameter <= v2)
-                    result = v2 > element1.sorting_parameter ? 1 : 0;
+                float v2 = element2.area;
+                if (element1.area <= v2)
+                    result = v2 > element1.area ? 1 : 0;
                 else
                     result = -1;
                 return result;
@@ -297,7 +293,7 @@ namespace TagTool.Commands.CollisionModels
                 float v13 = zdiff_2_0 * ydiff_1_0 - ydiff_2_0 * zdiff_1_0;
                 float v14 = zdiff_1_0 * xdiff_2_0 - zdiff_2_0 * xdiff_1_0;
 
-                newtriangle.sorting_parameter = (float)Math.Sqrt((v11 * v12 + v14 * v14 + v13 * v13) * 0.5);
+                newtriangle.area = (float)Math.Sqrt((v11 * v12 + v14 * v14 + v13 * v13) * 0.5);
                 Triangles.Add(newtriangle);
             }
 
@@ -916,22 +912,12 @@ namespace TagTool.Commands.CollisionModels
 
         public void debug_print_vertices(List<RealPoint3d> vertexlist)
         {
-            if (!isobj)
+            foreach (RealPoint3d vertex in vertexlist)
             {
-                foreach (RealPoint3d vertex in vertexlist)
-                {
-                    Console.WriteLine($"{vertex * 100.0f}");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"#NOTE: The below coordinates are fixed for OBJ convention!");
-                foreach (RealPoint3d vertex in vertexlist)
-                {
-                    RealPoint3d vertex_fix = new RealPoint3d { X = vertex.X, Y = -vertex.Z, Z = vertex.Y };
-                    Console.WriteLine($"{vertex_fix * 100.0f}");
-                }
-            }          
+                RealPoint3d vertex_fix = vertex * 100.0f;
+                Console.WriteLine($"{vertex_fix.X} , {vertex_fix.Y} , {vertex_fix.Z}");
+                Console.WriteLine($"{vertex_fix.X} , {-vertex_fix.Z} , {vertex_fix.Y} (Blender Convention)");
+            }      
         }
 
         public bool generate_surface_planes()

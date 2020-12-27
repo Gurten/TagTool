@@ -88,53 +88,59 @@ namespace TagTool.Commands.Porting
 
 			var resourceStreams = new Dictionary<ResourceLocation, Stream>();
 
-			using (var cacheStream = FlagIsSet(PortingFlags.Memory) ? new MemoryStream() : (Stream)CacheContext.OpenCacheReadWrite())
-            using(var blamCacheStream = BlamCache.OpenCacheRead())
-			{
-				if (FlagIsSet(PortingFlags.Memory))
-					using (var cacheFileStream = CacheContext.OpenCacheRead())
-						cacheFileStream.CopyTo(cacheStream);
+            try
+            {
+                using (var cacheStream = FlagIsSet(PortingFlags.Memory) ? new MemoryStream() : (Stream)CacheContext.OpenCacheReadWrite())
+                using (var blamCacheStream = BlamCache.OpenCacheRead())
+                {
+                    if (FlagIsSet(PortingFlags.Memory))
+                        using (var cacheFileStream = CacheContext.OpenCacheRead())
+                            cacheFileStream.CopyTo(cacheStream);
 
-				var oldFlags = Flags;
+                    var oldFlags = Flags;
 
-				foreach (var blamTag in ParseLegacyTag(args.Last()))
-				{
-					ConvertTag(cacheStream, blamCacheStream, resourceStreams, blamTag);
-					Flags = oldFlags;
-				}
+                    foreach (var blamTag in ParseLegacyTag(args.Last()))
+                    {
+                        ConvertTag(cacheStream, blamCacheStream, resourceStreams, blamTag);
+                        Flags = oldFlags;
+                    }
 
-				if (FlagIsSet(PortingFlags.Memory))
-					using (var cacheFileStream = CacheContext.OpenCacheReadWrite())
-					{
-						cacheFileStream.Seek(0, SeekOrigin.Begin);
-						cacheFileStream.SetLength(cacheFileStream.Position);
+                    if (FlagIsSet(PortingFlags.Memory))
+                        using (var cacheFileStream = CacheContext.OpenCacheReadWrite())
+                        {
+                            cacheFileStream.Seek(0, SeekOrigin.Begin);
+                            cacheFileStream.SetLength(cacheFileStream.Position);
 
-						cacheStream.Seek(0, SeekOrigin.Begin);
-						cacheStream.CopyTo(cacheFileStream);
-					}
-			}
+                            cacheStream.Seek(0, SeekOrigin.Begin);
+                            cacheStream.CopyTo(cacheFileStream);
+                        }
+                }
+            }
+            finally
+            {
 
-            if (initialStringIdCount != CacheContext.StringTable.Count)
-                CacheContext.SaveStrings();
+                if (initialStringIdCount != CacheContext.StringTable.Count)
+                    CacheContext.SaveStrings();
 
-			CacheContext.SaveTagNames();
+                CacheContext.SaveTagNames();
 
-			foreach (var entry in resourceStreams)
-			{
-				if (FlagIsSet(PortingFlags.Memory))
-					using (var resourceFileStream = CacheContext.ResourceCaches.OpenCacheReadWrite(entry.Key))
-					{
-						resourceFileStream.Seek(0, SeekOrigin.Begin);
-						resourceFileStream.SetLength(resourceFileStream.Position);
+                foreach (var entry in resourceStreams)
+                {
+                    if (FlagIsSet(PortingFlags.Memory))
+                        using (var resourceFileStream = CacheContext.ResourceCaches.OpenCacheReadWrite(entry.Key))
+                        {
+                            resourceFileStream.Seek(0, SeekOrigin.Begin);
+                            resourceFileStream.SetLength(resourceFileStream.Position);
 
-						entry.Value.Seek(0, SeekOrigin.Begin);
-						entry.Value.CopyTo(resourceFileStream);
-					}
+                            entry.Value.Seek(0, SeekOrigin.Begin);
+                            entry.Value.CopyTo(resourceFileStream);
+                        }
 
-				entry.Value.Close();
-			}
+                    entry.Value.Close();
+                }
 
-            Matcher.DeInit();
+                Matcher.DeInit();
+            }
 
 			return true;
 		}
@@ -146,7 +152,7 @@ namespace TagTool.Commands.Porting
             if (ResourceTagGroups.Contains(blamTag.Group.Tag))
             {
                 // there is only a few cases here -- if geometry\animation references a null resource its tag is still valid
-
+                
                 if (blamTag.Group.Tag == "snd!")
                 {
                     Sound sound = BlamCache.Deserialize<Sound>(blamCacheStream, blamTag);
@@ -202,7 +208,7 @@ namespace TagTool.Commands.Porting
                 TagTool.Shaders.ShaderMatching.ShaderMatcherNew.Rmt2Descriptor.TryParse(templateName, out var rmt2Descriptor);
 
                 foreach (var tag in CacheContext.TagCacheGenHO.TagTable)
-                    if (tag != null && tag.Group.Tag == "rmt2" && (tag.Name.Contains(rmt2Descriptor.Type) || (rmt2Descriptor.Type == "black" && FlagIsSet(PortingFlags.GenerateShaders))))
+                    if (tag != null && tag.Group.Tag == "rmt2" && (tag.Name.Contains(rmt2Descriptor.Type) || FlagIsSet(PortingFlags.GenerateShaders)))
                     {
                         if ((FlagIsSet(PortingFlags.Ms30) && tag.Name.StartsWith("ms30\\")) || (!FlagIsSet(PortingFlags.Ms30) && !tag.Name.StartsWith("ms30\\")))
                             return true;
@@ -217,7 +223,7 @@ namespace TagTool.Commands.Porting
                 resultTag = GetDefaultShader(blamTag.Group.Tag, resultTag);
                 return false;
             }
-            else if (blamTag.Group.Tag == "glvs" || blamTag.Group.Tag == "glps")
+            else if (blamTag.Group.Tag == "glvs" || blamTag.Group.Tag == "glps" || blamTag.Group.Tag == "rmdf")
                 return false; // these tags will be generated in the template generation code
 
             return true;
@@ -297,6 +303,8 @@ namespace TagTool.Commands.Porting
                 case "sncl" when BlamCache.Version > CacheVersion.HaloOnline700123:
                     return CacheContext.TagCache.GetTag<SoundClasses>(@"sound\sound_classes");
 
+                case "rmdf":
+                    return null;
 				case "glvs":
                     return null;//CacheContext.TagCache.GetTag<GlobalVertexShader>(@"shaders\shader_shared_vertex_shaders");
 				case "glps":
@@ -320,7 +328,8 @@ namespace TagTool.Commands.Porting
 
 			if (!CacheContext.TagCache.TagDefinitions.TagDefinitionExists(blamTag.Group))
 			{
-                throw new Exception($"Tag group {blamTag.Group} does not exist in destination cache!");
+                Console.WriteLine($"Tag group {blamTag.Group} does not exist in destination cache! Returning null!");
+                return null;
 			}
 
             var wasReplacing = FlagIsSet(PortingFlags.Replace);
@@ -560,18 +569,10 @@ namespace TagTool.Commands.Porting
                                 {
                                     //fix inverted vignette
                                     float temp = framesblock.Dynamicvalue1; 
-                                    framesblock.Dynamicvalue1 = framesblock.Dynamicvalue2;
-                                    framesblock.Dynamicvalue2 = temp;
+                                    framesblock.Dynamicvalue1 = framesblock.Dynamicvalue2 * 1.5f;
+                                    framesblock.Dynamicvalue2 = temp * 1.5f;
                                 }
                             }
-                        }
-                    }
-                    foreach (var postprocessblock in crte.PostProcessing)
-                    {
-                        foreach (var hueblock in postprocessblock.Hue)
-                        {
-                            //make red tentacles greenish brown
-                            hueblock.Basevalue1 = 55.0f;
                         }
                     }
                     break;
@@ -617,10 +618,6 @@ namespace TagTool.Commands.Porting
                     switch (gameobject)
                     {
                         case Weapon weapon:
-                            //fix weapon firing looping sounds
-                            foreach (var attach in weapon.Attachments)
-                                if (attach.PrimaryScale == CacheContext.StringTable.GetStringId("primary_firing"))
-                                    attach.PrimaryScale = CacheContext.StringTable.GetStringId("primary_rate_of_fire");
                             //fix weapon target tracking
                             if (weapon.Tracking > 0 || weapon.WeaponType == Weapon.WeaponTypeValue.Needler)
                             {
@@ -739,6 +736,18 @@ namespace TagTool.Commands.Porting
 				case RasterizerGlobals rasg:
 					blamDefinition = ConvertRasterizerGlobals(rasg);
 					break;
+
+                case RenderMethodOption rmop when BlamCache.Version == CacheVersion.Halo3ODST || BlamCache.Version >= CacheVersion.HaloReach:
+                    foreach (var block in rmop.Options)
+                    {
+                        if (BlamCache.Version == CacheVersion.Halo3ODST && block.RenderMethodExtern >= RenderMethodExtern.emblem_player_shoulder_texture)
+                            block.RenderMethodExtern = (RenderMethodExtern)((int)block.RenderMethodExtern + 2);
+                        if (BlamCache.Version >= CacheVersion.HaloReach)
+                        {
+                            // TODO
+                        }
+                    }
+                    break;
 
                 case RenderModel mode:
                     if (BlamCache.Version < CacheVersion.Halo3Retail)

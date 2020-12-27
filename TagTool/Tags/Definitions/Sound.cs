@@ -13,11 +13,12 @@ namespace TagTool.Tags.Definitions
     [TagStructure(Name = "sound", Tag = "snd!", Size = 0xD4, MinVersion = CacheVersion.HaloOnline498295, MaxVersion = CacheVersion.HaloOnline700123)]
     [TagStructure(Name = "sound", Tag = "snd!", Size = 0x24, MinVersion = CacheVersion.HaloReach)]
     public class Sound : TagStructure
-	{
+	{    
+        [TagField(Gen = CacheGeneration.Third)]
         public FlagsValue Flags;
-
         [TagField(Gen = CacheGeneration.HaloOnline)]
-        public short Unknown1;
+        public FlagsValueHaloOnline FlagsHO;
+
         [TagField(Gen = CacheGeneration.HaloOnline)]
         public uint Unknown2;
         [TagField(Gen = CacheGeneration.HaloOnline)]
@@ -65,23 +66,47 @@ namespace TagTool.Tags.Definitions
 
         [TagField(MinVersion = CacheVersion.HaloOnline301003, MaxVersion = CacheVersion.HaloOnline449175)]
         public uint Unknown12;
-        
+
         [Flags]
         public enum FlagsValue : ushort
         {
             None = 0,
             LoopingSound = 1 << 0,
-            SplitLongSoundIntoPermutations  = 1 << 1,
-            Bit2 = 1 << 2,
-            UseTagResourceMaybe = 1 << 3,
-            Bit4 = 1 << 4,
-            Bit5 = 1 << 5,
-            Bit6 = 1 << 6,
-            Bit7 = 1 << 7,
-            Bit8 = 1 << 8,
+            AlwaysSpatialize = 1 << 1,
+            NeverObstruct = 1 << 2,
+            FacialAnimationDataStripped = 1 << 3,
+            UseHugeTranmission = 1 << 4,
+            LinkToOwner = 1 << 5,
+            PitchRangeIsLanguage = 1 << 6,
+            DontUseSoundClassSpeakerFlag = 1 << 7,
+            DontUseLipsyncData = 1 << 8,
             Bit9 = 1 << 9,
             Bit10 = 1 << 10,
-            CopyIntoMemoryBeforePlaying = 1 << 11
+            FakeSpatialization = 1 << 11,
+            Invalid = 1 << 12,
+            // ODST
+            LowFrequencyEffect = 1 << 13
+        }
+
+        [Flags]
+        public enum FlagsValueHaloOnline : uint
+        {
+            None = 0,
+            LoopingSound = 1 << 0,
+            AlwaysSpatialize = 1 << 1,
+            NeverObstruct = 1 << 2,
+            FacialAnimationDataStripped = 1 << 3,
+            Bit4 = 1 << 4,
+            LinkToOwner = 1 << 5,
+            PitchRangeIsLanguage = 1 << 6,
+            DontUseSoundClassSpeakerFlag = 1 << 7,
+            DontUseLipsyncData = 1 << 8,
+            Bit9 = 1 << 9,
+            Bit10 = 1 << 10,
+            CopyIntoMemoryBeforePlaying = 1 << 11,
+            FakeSpatialization = 1 << 12,
+            Invalid = 1 << 13,
+            LowFrequencyEffect = 1 << 14
         }
 
         [TagStructure(Size = 0x9, MinVersion = CacheVersion.Halo2Xbox, MaxVersion = CacheVersion.Halo2Vista)]

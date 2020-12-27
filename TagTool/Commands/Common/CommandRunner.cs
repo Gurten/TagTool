@@ -26,6 +26,10 @@ namespace TagTool.Commands.Common
                 return;
             }
 
+            //use the # character to void lines in your script, so that they are not executed
+            if (commandLine.StartsWith("#"))
+                return;
+
             if (printInput)
                 Console.WriteLine(commandLine);
 
@@ -40,7 +44,7 @@ namespace TagTool.Commands.Common
                     return;
                 case "exit":
                     if (!ContextStack.Pop())
-                        EOF = true;
+                        Console.WriteLine("Cannot exit, already at base context! Use 'quit' to quit tagtool.");
                     return;
             }
 

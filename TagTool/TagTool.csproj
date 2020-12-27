@@ -235,6 +235,7 @@
     <Compile Include="Animations\AnimatedCodecHeader.cs" />
     <Compile Include="Animations\AnimationCodec.cs" />
     <Compile Include="Animations\AnimationCodecHeader.cs" />
+    <Compile Include="Animations\AnimationImporter.cs" />
     <Compile Include="Animations\Codecs\UncompressedStaticCodec.cs" />
     <Compile Include="Animations\StaticCodecHeader.cs" />
     <Compile Include="Animations\AnimationCodecType.cs" />
@@ -255,6 +256,11 @@
     <Compile Include="Bitmaps\XboxGraphics.cs" />
     <Compile Include="BlamFile\MapVariantGenerator.cs" />
     <Compile Include="Cache\CachedTag.cs" />
+    <Compile Include="Cache\CacheFile\CacheFileHeaderGenHaloOnline.cs" />
+    <Compile Include="Cache\CacheFile\CacheFileHeaderGen3.cs" />
+    <Compile Include="Cache\CacheFile\CacheFileHeaderGen2.cs" />
+    <Compile Include="Cache\CacheFile\CacheFileHeaderGen1.cs" />
+    <Compile Include="Cache\CacheFile\CacheFileHeader.cs" />
     <Compile Include="Cache\CacheFile\CacheFileVersion.cs" />
     <Compile Include="Cache\Codecs\CodecDefinition.cs" />
     <Compile Include="Cache\Gen1\CachedTagGen1.cs" />
@@ -268,6 +274,7 @@
     <Compile Include="Cache\Gen2\StringTableGen2.cs" />
     <Compile Include="Cache\Gen2\GameCacheGen2.cs" />
     <Compile Include="Cache\Gen2\TagCacheGen2.cs" />
+    <Compile Include="Cache\Gen3\StringIdResolverHalo3Beta.cs" />
     <Compile Include="Cache\Gen3\TagGroupGen3.cs" />
     <Compile Include="Cache\Interops\InteropDefinition.cs" />
     <Compile Include="Cache\Resources\CharacterUsage.cs" />
@@ -338,9 +345,12 @@
     <Compile Include="Commands\Modding\CreateModPackageCommand.cs" />
     <Compile Include="Commands\Modding\ExtractFontsCommand.cs" />
     <Compile Include="Commands\Modding\SwitchTagCacheCommand.cs" />
+    <Compile Include="Commands\ModelAnimationGraphs\ReplaceFPAnimation.cs" />
+    <Compile Include="Commands\ModelAnimationGraphs\AddAnimationCommand.cs" />
     <Compile Include="Commands\Models\ExtractBitmapsCommand.cs" />
     <Compile Include="Commands\Models\ExtractModelCommand.cs" />
     <Compile Include="Commands\Porting\DoNotReplaceGroupsCommand.cs" />
+    <Compile Include="Commands\Porting\Gen2\PortTagGen2Command.Animations.cs" />
     <Compile Include="Commands\Porting\Gen2\PortTagGen2Command.cs" />
     <Compile Include="Commands\Porting\MergeAnimationGraphsCommand.cs" />
     <Compile Include="Commands\Porting\PortClusterGeometryObjectCommand.cs" />
@@ -365,6 +375,7 @@
     <Compile Include="Commands\Porting\PortTagCommand.Sound.cs" />
     <Compile Include="Commands\Porting\PortTagCommand.Strings.cs" />
     <Compile Include="Commands\RenderMethods\PopulateParametersCommand.cs" />
+    <Compile Include="Commands\RenderMethods\SetBitmapCommand.cs" />
     <Compile Include="Commands\RenderModels\ExtractBitmapsCommand.cs" />
     <Compile Include="Commands\RenderModels\ExtractBMFCommand.cs" />
     <Compile Include="Commands\RenderModels\ExtractModelCommand.cs" />
@@ -398,6 +409,7 @@
     <Compile Include="Commands\Porting\PortingContextFactory.cs" />
     <Compile Include="Commands\Porting\PortTagCommand.PortingOptions.cs" />
     <Compile Include="Commands\Editing\ExportCommandsCommand.cs" />
+    <Compile Include="Commands\Bitmaps\GenerateBitmapCommand.cs" />
     <Compile Include="Commands\Tags\ListDuplicateTagsCommand.cs" />
     <Compile Include="Commands\Tags\CreateTagCommand.cs" />
     <Compile Include="Commands\Tags\DeleteTagCommand.cs" />
@@ -462,7 +474,6 @@
     <Compile Include="Cache\GameCache.cs" />
     <Compile Include="Cache\HaloOnline\GameCacheHaloOnlineBase.cs" />
     <Compile Include="BlamFile\MapFile.cs" />
-    <Compile Include="Cache\CacheFile\CacheFileHeader.cs" />
     <Compile Include="BlamFile\MapVariant.cs" />
     <Compile Include="Cache\ModPackages\ModPackage.cs" />
     <Compile Include="Cache\ModPackages\ModPackageHeader.cs" />
@@ -916,7 +927,7 @@
     <Compile Include="Damage\DamageReportingType.cs" />
     <Compile Include="Shaders\Compiler\D3D\D3DCompiler.cs" />
     <Compile Include="Shaders\Compiler\D3D\Include.cs" />
-    <Compile Include="Shaders\ShaderEntryPointBlock.cs" />
+    <Compile Include="Shaders\ShortOffsetCountBlock.cs" />
     <Compile Include="Shaders\ShaderParameter.cs" />
     <Compile Include="Shaders\PixelShaderBlock.cs" />
     <Compile Include="Shaders\VertexShaderBlock.cs" />
