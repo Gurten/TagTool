@@ -107,5 +107,7 @@ namespace TagTool.Cache
         }
 
         public abstract void SaveStrings();
+
+        public virtual void SaveTagNames(string path = null) => throw new NotImplementedException();
     }
 }

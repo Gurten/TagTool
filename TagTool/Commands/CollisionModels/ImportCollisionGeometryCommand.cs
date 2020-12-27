@@ -14,9 +14,9 @@ using TagTool.Commands.CollisionModels;
 
 namespace TagTool.Commands.CollisionModels
 {
-    class ImportCollisionGeometryCommand : Command
+    public class ImportCollisionGeometryCommand : Command
     {
-        private GameCacheHaloOnlineBase Cache { get; }
+        private GameCache Cache { get; }
         private CollisionGeometry Bsp { get; set; }
         private List<Assimp.Vector3D> Vertices { get; set; }
         private List<Face> Faces { get; set; }
@@ -27,7 +27,7 @@ namespace TagTool.Commands.CollisionModels
         private bool buildmopp = false;
         private bool isobj = false;
 
-        public ImportCollisionGeometryCommand(GameCacheHaloOnlineBase cache)
+        public ImportCollisionGeometryCommand(GameCache cache)
             : base(false,
 
                   "ImportCollisionGeometry",
@@ -43,7 +43,7 @@ namespace TagTool.Commands.CollisionModels
 
         public override object Execute(List<string> args)
         {
-            int maxindex = Cache.TagCacheGenHO.Tags.Count;
+            int maxindex = Cache.TagCache.Count;
             string tagName = $"newcoll{maxindex}";
             string fileName = "";
 
@@ -232,7 +232,7 @@ namespace TagTool.Commands.CollisionModels
                 }
             }
 
-            tag = Cache.TagCacheGenHO.AllocateTag(Cache.TagCache.TagDefinitions.GetTagDefinitionType("coll"), tagName);
+            tag = Cache.TagCache.AllocateTag(Cache.TagCache.TagDefinitions.GetTagDefinitionType("coll"), tagName);
 
             //write out the tag
             using (var stream = Cache.OpenCacheReadWrite())
